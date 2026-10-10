@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>출장비 로그 뷰어</title>
+<style>
+  :root{
+    --navy:#14284b; --navy2:#1f3a6e; --line:#d9e0ee; --bg:#f4f6fb; --white:#fff;
+    --text:#1b2438; --muted:#6b7690; --warn-bg:#fff4e0; --warn:#b25e00; --ok:#1d7a4d; --ok-bg:#e6f4ec;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Malgun Gothic","맑은 고딕",system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+  header{background:var(--navy);color:#fff;padding:18px 28px}
+  header h1{margin:0;font-size:20px}
+  header p{margin:4px 0 0;font-size:12px;opacity:.75}
+  main{max-width:1240px;margin:0 auto;padding:20px 20px 60px}
+  section{background:var(--white);border:1px solid var(--line);border-radius:8px;padding:18px 20px;margin-bottom:18px}
+  h2{margin:0 0 14px;font-size:15px;color:var(--navy);border-left:4px solid var(--navy);padding-left:9px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:3px}
+  input,select{width:100%;padding:7px 8px;border:1px solid var(--line);border-radius:5px;font:inherit;background:#fff}
+  input:focus,select:focus{outline:2px solid var(--navy2);border-color:var(--navy2)}
+  .wide{grid-column:span 2}
+  .hide{display:none}
+  .btns{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}
+  button{font:inherit;padding:8px 16px;border-radius:5px;border:1px solid var(--navy);background:var(--navy);color:#fff;cursor:pointer}
+  button:hover{background:var(--navy2)}
+  button.sub{background:#fff;color:var(--navy)}
+  button.sub:hover{background:#eef2fa}
+  button.mini{padding:3px 9px;font-size:12px}
+  .msg{color:#b00020;font-size:12px;margin-top:8px;min-height:16px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:14px}
+  .card{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 14px}
+  .card b{display:block;font-size:20px;color:var(--navy);margin-top:2px}
+  .card span{font-size:12px;color:var(--muted)}
+  .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .filters input{max-width:240px}.filters select{max-width:150px}
+  .tw{overflow-x:auto}
+  table{border-collapse:collapse;width:100%;min-width:1000px}
+  th{background:var(--navy);color:#fff;font-weight:600;padding:8px 8px;text-align:left;font-size:12px;white-space:nowrap}
+  td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+  td.n,th.n{text-align:right;white-space:nowrap}
+  tr:hover td{background:#f7f9fd}
+  .tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:600}
+  .tag.ok{background:var(--ok-bg);color:var(--ok)}
+  .tag.warn{background:var(--warn-bg);color:var(--warn)}
+  .notes{margin:5px 0 0;padding:0;list-style:none;font-size:12px;color:var(--muted)}
+  .notes li.w{color:var(--warn)}
+  .empty{text-align:center;color:var(--muted);padding:26px}
+  .rule{font-size:12px;color:var(--muted);line-height:1.7}
+  .sub2{color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>출장비 로그 뷰어</h1>
+  <p>기준: 사규 출장비 규정 (규정/사규_출장비규정.md) · 입력 내역은 이 브라우저에 저장됩니다</p>
+</header>
+<main>
+
+<section>
+  <h2 id="formTitle">출장 내역 입력</h2>
+  <form id="f" autocomplete="off">
+    <div class="grid">
+      <div><label>성명 *</label><input id="name" required></div>
+      <div><label>직급 *</label>
+        <select id="grade"><option>임원</option><option>부장 · 차장</option><option selected>과장 이하</option></select></div>
+      <div><label>출장 구분 *</label>
+        <select id="kind"><option value="국내">국내</option><option value="해외">해외</option></select></div>
+      <div id="wRegion" class="hide"><label>해외 지역 *</label>
+        <select id="region">
+          <option value="">선택</option>
+          <option>미주</option><option>유럽</option><option>일본</option><option>싱가포르</option><option>홍콩</option>
+          <option>그 밖의 지역</option>
+        </select></div>
+      <div class="wide"><label>목적지 *</label><input id="dest" required></div>
+      <div class="wide"><label>사유 *</label><input id="reason" required></div>
+      <div><label>출발일 *</label><input type="date" id="start" required></div>
+      <div><label>종료일 *</label><input type="date" id="end" required></div>
+      <div><label>숙박 박수 <span class="sub2">(비우면 일수-1)</span></label><input type="number" id="nights" min="0"></div>
+      <div id="wDist"><label>근무지~출장지 편도(km) *</label><input type="number" id="dist" min="0"></div>
+      <div><label id="lStay">숙박비 청구액(원)</label><input type="number" id="stay" min="0" step="any"></div>
+      <div><label>교통비 실비(원)</label><input type="number" id="trans" min="0"></div>
+      <div id="wCar"><label>자가차량 주행거리(km)</label><input type="number" id="km" min="0" step="any"></div>
+      <div id="wToll"><label>통행료 실비(원)</label><input type="number" id="toll" min="0"></div>
+      <div id="wAir" class="hide"><label>항공 좌석</label>
+        <select id="seat"><option>일반석</option><option>비즈니스석</option></select></div>
+      <div id="wFly" class="hide"><label>편도 비행시간(시간)</label><input type="number" id="fly" min="0" step="0.5"></div>
+      <div id="wFx" class="hide"><label>환율 (원/USD, 출발일 최초고시 매매기준율)</label><input type="number" id="fx" min="0" step="any"></div>
+      <div><label>출장 신청서 제출일</label><input type="date" id="applied"></div>
+      <div><label>출장 정산서 제출일</label><input type="date" id="settled"></div>
+    </div>
+    <div class="btns">
+      <button type="submit" id="saveBtn">내역 추가</button>
+      <button type="button" class="sub" id="cancelBtn" style="display:none">수정 취소</button>
+    </div>
+    <div class="msg" id="msg"></div>
+  </form>
+</section>
+
+<section>
+  <h2>출장 로그</h2>
+  <div class="cards">
+    <div class="card"><span>표시 건수</span><b id="cCount">0</b></div>
+    <div class="card"><span>지급 합계 (원화 환산 가능분)</span><b id="cSum">0원</b></div>
+    <div class="card"><span>확인 필요</span><b id="cWarn">0건</b></div>
+  </div>
+  <div class="filters">
+    <input id="q" placeholder="성명 · 목적지 · 사유 검색">
+    <select id="fKind"><option value="">구분 전체</option><option>국내</option><option>해외</option></select>
+    <select id="fStat"><option value="">상태 전체</option><option>정상</option><option>확인 필요</option></select>
+  </div>
+  <div class="tw">
+    <table>
+      <thead><tr>
+        <th>출장기간</th><th>성명 / 직급</th><th>구분</th><th>목적지 · 사유</th><th class="n">일수/박</th>
+        <th class="n">일비</th><th class="n">숙박비</th><th class="n">식비</th><th class="n">교통·차량</th><th class="n">합계(원)</th><th>상태 · 비고</th><th></th>
+      </tr></thead>
+      <tbody id="tb"></tbody>
+    </table>
+  </div>
+  <div class="btns">
+    <button id="csvBtn">CSV 다운로드</button>
+    <button class="sub" id="clearBtn">전체 삭제</button>
+  </div>
+</section>
+
+<section>
+  <h2>적용 규칙 요약</h2>
+  <div class="rule">
+    국내(편도 50km 이상): 직급별 일비·식비 × 일수, 숙박비는 1박 한도 × 박수 이내 실비(영수증), 교통비 실비, 자가차량은 km당 300원 + 통행료 실비.<br>
+    해외: 지역(A: 미주·유럽·일본·싱가포르·홍콩 / B: 그 밖) · 직급별 USD 일비 × 일수, 숙박비는 USD 한도 × 박수 이내, 출발일 매매기준율로 원화 환산.<br>
+    항공은 일반석 기준, 임원만 편도 8시간 이상 비즈니스석 가능. 신청은 출장 3영업일 전, 정산은 종료 후 7일 이내.<br>
+    규정에 없는 경우(해외 식비, 환율 미입력, 국내 기준 미달 등)는 <b>확인 필요</b>로 표시됩니다. 영업일은 주말만 제외하며 공휴일은 반영하지 않습니다.
+  </div>
+</section>
+</main>
+
+<script>
+const KEY = 'bizTripLog.v1';
+const $ = id => document.getElementById(id);
+
+const DOM = {'임원':{day:30000,stay:150000,meal:40000},'부장 · 차장':{day:25000,stay:120000,meal:30000},'과장 이하':{day:20000,stay:100000,meal:30000}};
+const OVS = {'임원':{dayA:100,dayB:80,stayA:300,stayB:220},'부장 · 차장':{dayA:80,dayB:60,stayA:250,stayB:180},'과장 이하':{dayA:70,dayB:50,stayA:200,stayB:150}};
+const A_REGIONS = ['미주','유럽','일본','싱가포르','홍콩'];
+const KM_RATE = 300;
+
+let rows = load();
+let editId = null;
+
+function load(){ try{ return JSON.parse(localStorage.getItem(KEY)) || []; }catch(e){ return []; } }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(rows)); }catch(e){ alert('브라우저 저장에 실패했습니다.'); } }
+
+const num = v => (v === '' || v == null || isNaN(+v)) ? 0 : +v;
+const won = n => Math.round(n).toLocaleString('ko-KR');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const d0 = s => new Date(s + 'T00:00:00');
+const dayDiff = (a, b) => Math.round((d0(b) - d0(a)) / 86400000);
+
+// 출장 시작일 이전 영업일(주말 제외) 수: 신청일 다음날부터 출발 전날까지가 아니라, 신청일 → 출발일 영업일 간격
+function bizDays(from, to){
+  let n = 0, d = d0(from);
+  const end = d0(to);
+  while (d < end){ d.setDate(d.getDate() + 1); const w = d.getDay(); if (w !== 0 && w !== 6) n++; }
+  return n;
+}
+
+function calc(r){
+  const out = {days:0, nights:0, day:0, stay:0, meal:0, trans:0, total:0, notes:[], warn:false};
+  const W = t => { out.notes.push({w:true, t}); out.warn = true; };
+  const I = t => out.notes.push({w:false, t});
+
+  if (!r.start || !r.end || r.end < r.start){ W('출장 기간이 올바르지 않음'); return out; }
+  out.days = dayDiff(r.start, r.end) + 1;
+  out.nights = (r.nights === '' || r.nights == null) ? out.days - 1 : num(r.nights);
+  if (out.nights > out.days - 1) W('숙박 박수가 출장 기간보다 많음');
+
+  if (r.kind === '국내'){
+    const t = DOM[r.grade];
+    if (!t){ W('직급이 규정에 없음'); return out; }
+    if (r.dist === '' || r.dist == null) W('편도 거리 미입력 (국내 출장 기준 50km 확인 불가)');
+    else if (num(r.dist) < 50) W('편도 50km 미만 — 국내 출장 기준(제2조) 미달');
+    out.day = t.day * out.days;
+    out.meal = t.meal * out.days;
+    const limit = t.stay * out.nights, claim = num(r.stay);
+    out.stay = Math.min(claim, limit);
+    if (claim > limit) I('숙박비 한도 초과 ' + won(claim - limit) + '원 미지급 (한도 ' + won(limit) + '원)');
+    if (claim > 0 && out.nights === 0) W('숙박 0박인데 숙박비 청구됨');
+    const car = num(r.km) * KM_RATE + num(r.toll);
+    out.trans = num(r.trans) + car;
+    if (num(r.km) > 0) I('자가차량 ' + won(num(r.km) * KM_RATE) + '원 + 통행료 ' + won(num(r.toll)) + '원');
+    out.total = out.day + out.stay + out.meal + out.trans;
+  } else {
+    const t = OVS[r.grade];
+    if (!t){ W('직급이 규정에 없음'); return out; }
+    if (!r.region){ W('해외 지역 미선택'); return out; }
+    const a = A_REGIONS.includes(r.region), zone = a ? 'A' : 'B';
+    const dayUsd = t[a ? 'dayA' : 'dayB'] * out.days;
+    const limUsd = t[a ? 'stayA' : 'stayB'] * out.nights;
+    const claimUsd = num(r.stay);
+    const stayUsd = Math.min(claimUsd, limUsd);
+    if (claimUsd > limUsd) I('숙박비 한도 초과 USD ' + (claimUsd - limUsd).toFixed(2) + ' 미지급 (한도 USD ' + limUsd + ')');
+    I(zone + '지역 · 일비 USD ' + dayUsd + ' / 숙박비 USD ' + stayUsd.toFixed(2));
+    W('해외 식비 규정 없음 (식비 미산정)');
+    const fx = num(r.fx);
+    if (!fx) W('환율 미입력 — 일비·숙박비 원화 환산 불가');
+    else { out.day = dayUsd * fx; out.stay = stayUsd * fx; }
+    out.trans = num(r.trans);
+    if (num(r.km) > 0 || num(r.toll) > 0) W('해외 출장의 자가차량 비용 규정 없음 (제외)');
+    if (r.seat === '비즈니스석'){
+      if (r.grade !== '임원') W('비즈니스석은 임원만 가능 (제6조)');
+      else if (!r.fly) W('비행시간 미입력 (비즈니스석은 편도 8시간 이상)');
+      else if (num(r.fly) < 8) W('편도 8시간 미만 — 비즈니스석 불가 (제6조)');
+    }
+    out.total = out.day + out.stay + out.meal + out.trans;
+  }
+  if (num(r.trans) > 0) I('교통비는 영수증 첨부 필요');
+
+  if (r.applied){
+    const n = bizDays(r.applied, r.start);
+    if (r.applied > r.start || n < 3) W('출장 신청 3영업일 전 기준 미충족 (신청일~출발일 ' + (r.applied > r.start ? '출발 후 신청' : n + '영업일') + ')');
+  } else I('신청서 제출일 미입력');
+  if (r.settled){
+    const gap = dayDiff(r.end, r.settled);
+    if (gap > 7) W('정산서 제출 기한(종료 후 7일) ' + (gap - 7) + '일 초과');
+    else if (gap < 0) W('정산서 제출일이 종료일보다 빠름');
+  } else I('정산서 제출일 미입력');
+  return out;
+}
+
+function render(){
+  const q = $('q').value.trim().toLowerCase(), fk = $('fKind').value, fs = $('fStat').value;
+  const list = rows.map(r => ({r, c: calc(r)})).filter(({r, c}) => {
+    if (fk && r.kind !== fk) return false;
+    if (fs && (fs === '확인 필요') !== c.warn) return false;
+    if (q && !(r.name + ' ' + r.dest + ' ' + r.reason).toLowerCase().includes(q)) return false;
+    return true;
+  }).sort((a, b) => (b.r.start || '').localeCompare(a.r.start || ''));
+
+  $('tb').innerHTML = list.length ? list.map(({r, c}) => `
+    <tr>
+      <td>${esc(r.start)}<br><span class="sub2">~ ${esc(r.end)}</span></td>
+      <td>${esc(r.name)}<br><span class="sub2">${esc(r.grade)}</span></td>
+      <td>${esc(r.kind)}${r.kind === '해외' ? '<br><span class="sub2">' + esc(r.region) + '</span>' : ''}</td>
+      <td>${esc(r.dest)}<br><span class="sub2">${esc(r.reason)}</span></td>
+      <td class="n">${c.days}일 / ${c.nights}박</td>
+      <td class="n">${won(c.day)}</td><td class="n">${won(c.stay)}</td><td class="n">${won(c.meal)}</td><td class="n">${won(c.trans)}</td>
+      <td class="n"><b>${won(c.total)}</b></td>
+      <td><span class="tag ${c.warn ? 'warn' : 'ok'}">${c.warn ? '확인 필요' : '정상'}</span>
+        <ul class="notes">${c.notes.map(n => `<li class="${n.w ? 'w' : ''}">${n.w ? '⚠ ' : '· '}${esc(n.t)}</li>`).join('')}</ul></td>
+      <td style="white-space:nowrap"><button class="mini sub" data-e="${r.id}">수정</button> <button class="mini sub" data-d="${r.id}">삭제</button></td>
+    </tr>`).join('') : '<tr><td class="empty" colspan="12">표시할 내역이 없습니다.</td></tr>';
+
+  $('cCount').textContent = list.length;
+  $('cSum').textContent = won(list.reduce((s, x) => s + x.c.total, 0)) + '원';
+  $('cWarn').textContent = list.filter(x => x.c.warn).length + '건';
+}
+
+function syncForm(){
+  const ov = $('kind').value === '해외';
+  ['wRegion','wAir','wFly','wFx'].forEach(i => $(i).classList.toggle('hide', !ov));
+  ['wDist'].forEach(i => $(i).classList.toggle('hide', ov));
+  $('lStay').textContent = ov ? '숙박비 청구액(USD)' : '숙박비 청구액(원)';
+  $('wCar').querySelector('label').textContent = ov ? '자가차량 주행거리(km) — 해외 규정 없음' : '자가차량 주행거리(km)';
+}
+
+const FIELDS = ['name','grade','kind','region','dest','reason','start','end','nights','dist','stay','trans','km','toll','seat','fly','fx','applied','settled'];
+
+function resetForm(){
+  $('f').reset(); editId = null;
+  $('formTitle').textContent = '출장 내역 입력'; $('saveBtn').textContent = '내역 추가'; $('cancelBtn').style.display = 'none';
+  $('msg').textContent = ''; syncForm();
+}
+
+$('kind').addEventListener('change', syncForm);
+$('cancelBtn').addEventListener('click', resetForm);
+
+$('f').addEventListener('submit', e => {
+  e.preventDefault();
+  const r = {}; FIELDS.forEach(k => r[k] = $(k).value.trim ? $(k).value.trim() : $(k).value);
+  if (r.end < r.start){ $('msg').textContent = '종료일이 출발일보다 빠릅니다.'; return; }
+  if (r.kind === '해외' && !r.region){ $('msg').textContent = '해외 지역을 선택하세요.'; return; }
+  if (r.kind === '국내'){ r.region = ''; r.seat = '일반석'; r.fly = ''; r.fx = ''; }
+  else r.dist = '';
+  if (editId){ const i = rows.findIndex(x => x.id === editId); r.id = editId; rows[i] = r; }
+  else { r.id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6); rows.push(r); }
+  save(); resetForm(); render();
+});
+
+$('tb').addEventListener('click', e => {
+  const de = e.target.dataset.d, ee = e.target.dataset.e;
+  if (de && confirm('이 내역을 삭제할까요?')){ rows = rows.filter(r => r.id !== de); save(); render(); }
+  if (ee){
+    const r = rows.find(x => x.id === ee); if (!r) return;
+    FIELDS.forEach(k => $(k).value = r[k] ?? '');
+    editId = ee; syncForm();
+    $('formTitle').textContent = '출장 내역 수정'; $('saveBtn').textContent = '수정 저장'; $('cancelBtn').style.display = '';
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  }
+});
+
+['q','fKind','fStat'].forEach(i => $(i).addEventListener('input', render));
+
+$('clearBtn').addEventListener('click', () => {
+  if (rows.length && confirm('저장된 모든 내역을 삭제할까요? 되돌릴 수 없습니다.')){ rows = []; save(); render(); }
+});
+
+$('csvBtn').addEventListener('click', () => {
+  const head = ['출발일','종료일','성명','직급','구분','지역','목적지','사유','일수','박수','일비(원)','숙박비(원)','식비(원)','교통·차량(원)','합계(원)','상태','비고'];
+  const cell = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+  const lines = [head.map(cell).join(',')];
+  rows.slice().sort((a, b) => (a.start || '').localeCompare(b.start || '')).forEach(r => {
+    const c = calc(r);
+    lines.push([r.start, r.end, r.name, r.grade, r.kind, r.region, r.dest, r.reason, c.days, c.nights,
+      Math.round(c.day), Math.round(c.stay), Math.round(c.meal), Math.round(c.trans), Math.round(c.total),
+      c.warn ? '확인 필요' : '정상', c.notes.map(n => (n.w ? '[확인] ' : '') + n.t).join(' / ')].map(cell).join(','));
+  });
+  const blob = new Blob(['﻿' + lines.join('\r\n')], {type: 'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '출장비_로그_' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+
+syncForm(); render();
+</script>
+</body>
+</html>
